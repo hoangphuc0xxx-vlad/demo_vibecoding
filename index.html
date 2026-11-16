@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="vi">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<title>Mượn thiết bị CLB</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+/* Bố cục: thanh đầu trang + 2 tab (Thành viên / Người phụ trách); mỗi tab là các khối bảng xếp dọc */
+:root{
+  --bg:#f3f6f7; --surface:#ffffff; --fg:#14262b; --muted:#5b6f75; --line:#d5dee1;
+  --accent:#0b6b74; --accent-fg:#ffffff; --accent-soft:#dff0f1;
+  --ok-bg:#dcf3e4; --ok-fg:#14602f; --warn-bg:#fdecc8; --warn-fg:#7a4a00;
+  --bad-bg:#fbdcd9; --bad-fg:#8f1d14; --info-bg:#dde8fb; --info-fg:#1c3f86; --idle-bg:#e6eaec; --idle-fg:#44555a;
+  --font:"Be Vietnam Pro",system-ui,"Segoe UI",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e181b; --surface:#16252a; --fg:#e6eef0; --muted:#9bb0b6; --line:#2b3f45;
+  --accent:#4fc3cc; --accent-fg:#06262a; --accent-soft:#17383d;
+  --ok-bg:#153d25; --ok-fg:#9be3b4; --warn-bg:#4a3608; --warn-fg:#f6d48a;
+  --bad-bg:#4d1c17; --bad-fg:#f7b3ac; --info-bg:#1b2f58; --info-fg:#b3caf7; --idle-bg:#27363b; --idle-fg:#b9c7cb;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e181b; --surface:#16252a; --fg:#e6eef0; --muted:#9bb0b6; --line:#2b3f45;
+  --accent:#4fc3cc; --accent-fg:#06262a; --accent-soft:#17383d;
+  --ok-bg:#153d25; --ok-fg:#9be3b4; --warn-bg:#4a3608; --warn-fg:#f6d48a;
+  --bad-bg:#4d1c17; --bad-fg:#f7b3ac; --info-bg:#1b2f58; --info-fg:#b3caf7; --idle-bg:#27363b; --idle-fg:#b9c7cb;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+h1{font-size:1.5rem;margin:0;font-weight:700;text-wrap:balance}
+h2{font-size:1.05rem;margin:0;font-weight:600}
+.sub{color:var(--muted);font-size:.85rem;margin:2px 0 0}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line)}
+.tab{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;font:inherit;font-weight:600;color:var(--muted);cursor:pointer}
+.tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.view{display:flex;flex-direction:column;gap:18px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;font-weight:600;color:var(--muted);flex:1 1 170px;min-width:0}
+input,select{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;min-width:0;width:100%}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:inherit;cursor:pointer}
+.btn{background:var(--accent);color:var(--accent-fg);border:1px solid var(--accent);border-radius:7px;padding:8px 14px;font-weight:600}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.sm{padding:4px 9px;font-size:.8rem}
+.btn.danger{background:transparent;color:var(--bad-fg);border-color:var(--bad-fg)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap}
+td.acts{white-space:nowrap}
+td.acts>*{margin-right:4px}
+td select{padding:4px 6px;font-size:.85rem;width:auto}
+.code{font-weight:600;white-space:nowrap}
+.pill{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.78rem;font-weight:600;white-space:nowrap}
+.p-ok{background:var(--ok-bg);color:var(--ok-fg)} .p-warn{background:var(--warn-bg);color:var(--warn-fg)}
+.p-bad{background:var(--bad-bg);color:var(--bad-fg)} .p-info{background:var(--info-bg);color:var(--info-fg)} .p-idle{background:var(--idle-bg);color:var(--idle-fg)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.stat b{display:block;font-size:1.6rem;line-height:1.2}
+.stat span{font-size:.8rem;color:var(--muted)}
+.err{background:var(--bad-bg);color:var(--bad-fg);border-radius:7px;padding:8px 12px;font-size:.88rem}
+.err ul{margin:0;padding-left:18px}
+.note{color:var(--muted);font-size:.82rem;margin:0}
+.empty{color:var(--muted);padding:14px 10px}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:min(560px,calc(100% - 32px));padding:10px 16px;border-radius:8px;font-weight:500;font-size:.9rem;z-index:20;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+#toast.ok{background:var(--ok-bg);color:var(--ok-fg)} #toast.bad{background:var(--bad-bg);color:var(--bad-fg)} #toast.warn{background:var(--warn-bg);color:var(--warn-fg)}
+@media (max-width:520px){.stats{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Mượn thiết bị câu lạc bộ</h1>
+      <p class="sub" id="sync">Lưu trên trình duyệt này</p>
+    </div>
+    <button class="btn ghost" id="btnSample" type="button">Nạp dữ liệu mẫu</button>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tabMember" type="button" aria-selected="true">Thành viên</button>
+    <button class="tab" role="tab" id="tabAdmin" type="button" aria-selected="false">Người phụ trách</button>
+  </div>
+
+  <!-- ===== THÀNH VIÊN ===== -->
+  <section class="view" id="viewMember">
+    <div class="stats" id="stats"></div>
+
+    <div class="panel">
+      <div class="head"><h2>Danh sách thiết bị</h2></div>
+      <div class="row">
+        <label>Lọc theo tình trạng<select id="fltStatus"><option value="">Tất cả tình trạng</option><option>Sẵn sàng</option><option>Đang mượn</option><option>Bảo trì</option></select></label>
+        <label>Lọc theo loại<select id="fltType"><option value="">Tất cả loại</option></select></label>
+      </div>
+      <div class="scroll"><table><thead><tr><th>Mã</th><th>Tên thiết bị</th><th>Loại</th><th>Tình trạng</th><th>Ghi chú</th><th></th></tr></thead><tbody id="devBody"></tbody></table></div>
+    </div>
+
+    <div class="panel">
+      <h2 id="reqFormTitle">Gửi yêu cầu mượn</h2>
+      <form id="reqForm" novalidate>
+        <div class="row">
+          <label>Thiết bị<select id="fDev"></select></label>
+          <label>Tên người mượn<input id="fName" type="text" autocomplete="name" placeholder="Ví dụ: Dung Phạm"></label>
+          <label>Ngày giờ mượn<input id="fStart" type="datetime-local"></label>
+          <label>Ngày giờ trả dự kiến<input id="fEnd" type="datetime-local"></label>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn" type="submit" id="reqSubmit">Gửi yêu cầu</button>
+          <button class="btn ghost" type="button" id="reqCancel" hidden>Hủy sửa</button>
+        </div>
+      </form>
+      <div class="err" id="reqErr" hidden></div>
+      <p class="note">Yêu cầu được duyệt tự động khi thiết bị đang sẵn sàng và không trùng lịch với yêu cầu đã duyệt khác. Các trường hợp còn lại chờ người phụ trách duyệt.</p>
+    </div>
+
+    <div class="panel">
+      <div class="head"><h2>Tra cứu yêu cầu</h2></div>
+      <label>Tìm theo tên người mượn hoặc mã thiết bị<input id="qMember" type="search" placeholder="Ví dụ: Bình hoặc TB-03"></label>
+      <div class="scroll"><table><thead><tr><th>Mã</th><th>Người mượn</th><th>Thiết bị</th><th>Mượn</th><th>Trả</th><th>Trạng thái</th><th></th></tr></thead><tbody id="reqBodyMember"></tbody></table></div>
+      <p class="note">Bạn sửa hoặc xóa được yêu cầu khi còn ở trạng thái Chờ duyệt.</p>
+    </div>
+  </section>
+
+  <!-- ===== NGƯỜI PHỤ TRÁCH ===== -->
+  <section class="view" id="viewAdmin" hidden>
+    <div class="panel" id="loginBox">
+      <h2>Đăng nhập người phụ trách</h2>
+      <form id="loginForm" novalidate>
+        <div class="row">
+          <label>Tài khoản<input id="lgUser" type="text" autocomplete="username"></label>
+          <label>Mật khẩu<input id="lgPass" type="password" autocomplete="current-password"></label>
+          <button class="btn" type="submit">Đăng nhập</button>
+        </div>
+      </form>
+      <div class="err" id="lgErr" hidden></div>
+      <p class="note">Tài khoản demo: <b>admin</b> / <b>clb2026</b></p>
+    </div>
+
+    <div class="view" id="adminBody" hidden>
+      <div class="panel">
+        <div class="head"><h2>Duyệt yêu cầu</h2><button class="btn ghost sm" type="button" id="btnLogout">Đăng xuất</button></div>
+        <label>Tìm theo tên người mượn hoặc mã thiết bị<input id="qAdmin" type="search" placeholder="Ví dụ: An hoặc TB-02"></label>
+        <div class="scroll"><table><thead><tr><th>Mã</th><th>Người mượn</th><th>Thiết bị</th><th>Mượn</th><th>Trả</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="reqBodyAdmin"></tbody></table></div>
+        <p class="note">Chuyển sang Đã duyệt hoặc Đang mượn sẽ bị chặn nếu thiết bị đang bảo trì hoặc trùng lịch với yêu cầu đã duyệt/đang mượn khác. Trả đúng thời điểm yêu cầu khác bắt đầu mượn cũng tính là trùng.</p>
+      </div>
+
+      <div class="panel">
+        <h2 id="devFormTitle">Thêm thiết bị</h2>
+        <form id="devForm" novalidate>
+          <div class="row">
+            <label>Mã<input id="dCode" type="text"></label>
+            <label>Tên thiết bị<input id="dName" type="text"></label>
+            <label>Loại<input id="dType" type="text" list="typeList"><datalist id="typeList"></datalist></label>
+            <label>Tình trạng<select id="dStatus"><option>Sẵn sàng</option><option>Đang mượn</option><option>Bảo trì</option></select></label>
+            <label>Ghi chú<input id="dNote" type="text"></label>
+          </div>
+          <div class="row" style="margin-top:12px">
+            <button class="btn" type="submit" id="devSubmit">Thêm thiết bị</button>
+            <button class="btn ghost" type="button" id="devCancel" hidden>Hủy sửa</button>
+          </div>
+        </form>
+        <div class="err" id="devErr" hidden></div>
+        <div class="scroll"><table><thead><tr><th>Mã</th><th>Tên thiết bị</th><th>Loại</th><th>Tình trạng</th><th>Ghi chú</th><th>Thao tác</th></tr></thead><tbody id="devBodyAdmin"></tbody></table></div>
+      </div>
+    </div>
+  </section>
+</div>
+<div id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+'use strict';
+var LS='clb-muon-thiet-bi-v1';
+var BLOCK=['Đã duyệt','Đang mượn'];
+var REQ_ST=['Chờ duyệt','Đã duyệt','Đang mượn','Đã trả','Từ chối'];
+var DEV_ST=['Sẵn sàng','Đang mượn','Bảo trì'];
+var ADMIN_USER='admin', ADMIN_PASS='clb2026';
+// Dữ liệu mẫu BTC. Đề chỉ cho ngày, giờ mặc định 08:00 - 17:00.
+var SAMPLE={
+  devices:[
+    {code:'TB-01',name:'Máy ảnh Lumix G7',type:'Máy ảnh',status:'Sẵn sàng',note:'Kèm pin và thẻ nhớ'},
+    {code:'TB-02',name:'Chân máy mini',type:'Phụ kiện',status:'Đang mượn',note:'Dự kiến trả ngày 22/11'},
+    {code:'TB-03',name:'Micro USB',type:'Âm thanh',status:'Sẵn sàng',note:'Dùng ghi âm/phỏng vấn'},
+    {code:'TB-04',name:'Đèn LED để bàn',type:'Ánh sáng',status:'Bảo trì',note:'Không cho đăng ký mượn'},
+    {code:'TB-05',name:'Tripod cao',type:'Phụ kiện',status:'Sẵn sàng',note:'Có túi đựng'}
+  ],
+  requests:[
+    {id:'YC-101',name:'An Nguyễn',device:'TB-02',start:'2026-11-22T08:00',end:'2026-11-23T17:00',status:'Chờ duyệt'},
+    {id:'YC-102',name:'Bình Trần',device:'TB-03',start:'2026-11-21T08:00',end:'2026-11-21T17:00',status:'Đã duyệt'},
+    {id:'YC-103',name:'Chi Lê',device:'TB-01',start:'2026-11-24T08:00',end:'2026-11-25T17:00',status:'Đang mượn'}
+  ]
+};
+
+function $(id){return document.getElementById(id);}
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function norm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');}
+function pad(n){return (n<10?'0':'')+n;}
+function nowLocal(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());}
+function fmt(s){if(!s)return '';var m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})/.exec(s);return m?m[3]+'/'+m[2]+'/'+m[1]+' '+m[4]:s;}
+function valid(s){return s&&Array.isArray(s.devices)&&Array.isArray(s.requests);}
+
+function load(){try{var s=JSON.parse(localStorage.getItem(LS));if(valid(s))return s;}catch(e){}return clone(SAMPLE);}
+var state=load();
+var dbDoc=null, writeChain=Promise.resolve();
+var admin=false;try{admin=sessionStorage.getItem('clb-admin')==='1';}catch(e){}
+var editingReq=null, editingDev=null, armed=null, armTimer=null, toastTimer=null;
+
+function setSync(t){$('sync').textContent=t;}
+function persistLocal(){try{localStorage.setItem(LS,JSON.stringify(state));}catch(e){}}
+var pendingAuto=[];
+// Quét tự động duyệt: mọi yêu cầu Chờ duyệt có thiết bị Sẵn sàng và không trùng lịch sẽ thành Đã duyệt (xét theo thứ tự gửi).
+function autoApprove(exceptId){
+  var done=[];
+  state.requests.forEach(function(r){
+    if(r.status!=='Chờ duyệt'||r.id===exceptId)return;
+    var d=dev(r.device);
+    if(d&&d.status==='Sẵn sàng'&&!findConflict(r)){r.status='Đã duyệt';done.push(r.id);}
+  });
+  return done;
+}
+function save(skip){
+  pendingAuto=skip===true?[]:autoApprove(skip);
+  persistLocal();
+  if(dbDoc){
+    var body={devices:clone(state.devices),requests:clone(state.requests)};
+    var doc=dbDoc;
+    writeChain=writeChain.then(function(){return doc.set(body);}).catch(function(){setSync('Không ghi được dữ liệu chung, đang lưu trên trình duyệt này');});
+  }
+  render();
+}
+function toast(msg,kind){
+  if(pendingAuto.length){msg+=' Tự động duyệt: '+pendingAuto.join(', ')+'.';pendingAuto=[];}
+  var t=$('toast');t.textContent=msg;t.className=kind||'ok';t.hidden=false;
+  clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.hidden=true;},kind==='ok'?3500:7000);
+}
+function showErr(id,list){
+  var el=$(id);
+  if(!list||!list.length){el.hidden=true;el.innerHTML='';return;}
+  el.innerHTML='<ul>'+list.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';el.hidden=false;
+}
+
+/* ---------- Nghiệp vụ ---------- */
+function dev(code){for(var i=0;i<state.devices.length;i++)if(state.devices[i].code===code)return state.devices[i];return null;}
+function req(id){for(var i=0;i<state.requests.length;i++)if(state.requests[i].id===id)return state.requests[i];return null;}
+// Trùng lịch: hai khoảng giao nhau, kể cả chạm đúng một thời điểm (trả lúc 08:00 và mượn lúc 08:00 là trùng).
+function overlap(a,b){return a.start<=b.end&&b.start<=a.end;}
+function findConflict(r){
+  for(var i=0;i<state.requests.length;i++){
+    var o=state.requests[i];
+    if(o.id!==r.id&&o.device===r.device&&BLOCK.indexOf(o.status)>=0&&overlap(o,r))return o;
+  }
+  return null;
+}
+function nextId(list,key,prefix,width,floor){
+  var max=floor;
+  list.forEach(function(x){var m=/(\d+)\s*$/.exec(x[key]||'');if(m)max=Math.max(max,parseInt(m[1],10));});
+  var n=String(max+1);while(n.length<width)n='0'+n;return prefix+n;
+}
+function changeStatus(id,to){
+  var r=req(id);if(!r||r.status===to)return null;
+  var d=dev(r.device), from=r.status;
+  if(BLOCK.indexOf(to)>=0){
+    if(!d)return 'Thiết bị '+r.device+' không còn trong danh sách nên không thể duyệt.';
+    if(d.status==='Bảo trì')return d.code+' ('+d.name+') đang bảo trì nên không thể duyệt hoặc cho mượn.';
+    var c=findConflict(r);
+    if(c)return 'Trùng lịch: '+r.device+' đã có '+c.id+' của '+c.name+' ('+c.status+') từ '+fmt(c.start)+' đến '+fmt(c.end)+'. Hãy từ chối yêu cầu này hoặc đổi thời gian.';
+    if(to==='Đang mượn'&&d.status==='Đang mượn'){
+      var holder=null;
+      state.requests.forEach(function(o){if(o.id!==r.id&&o.device===r.device&&o.status==='Đang mượn')holder=o;});
+      return d.code+' chưa về kho'+(holder?' ('+holder.id+' của '+holder.name+' đang mượn)':'')+'. Xác nhận trả hoặc đổi tình trạng thiết bị về Sẵn sàng trước khi giao.';
+    }
+  }
+  r.status=to;
+  if(to==='Đã trả')r.returnedAt=nowLocal();else delete r.returnedAt;
+  if(d){
+    if(to==='Đang mượn')d.status='Đang mượn';
+    else if(from==='Đang mượn'&&d.status==='Đang mượn'){
+      var still=state.requests.some(function(o){return o.device===d.code&&o.status==='Đang mượn';});
+      if(!still)d.status='Sẵn sàng';
+    }
+  }
+  return null;
+}
+
+/* ---------- Hiển thị ---------- */
+function pillDev(s){return '<span class="pill '+(s==='Sẵn sàng'?'p-ok':s==='Đang mượn'?'p-warn':'p-bad')+'">'+esc(s)+'</span>';}
+function pillReq(s){var c={'Chờ duyệt':'p-warn','Đã duyệt':'p-info','Đang mượn':'p-ok','Đã trả':'p-idle','Từ chối':'p-bad'}[s]||'p-idle';return '<span class="pill '+c+'">'+esc(s)+'</span>';}
+function delLabel(key){return armed===key?'Bấm lần nữa để xóa':'Xóa';}
+function setOptions(sel,html){var v=sel.value;sel.innerHTML=html;sel.value=v;if(sel.value!==v)sel.selectedIndex=0;}
+
+function render(){
+  var ds=state.devices, rs=state.requests;
+  // Thống kê
+  var cnt={};DEV_ST.forEach(function(s){cnt[s]=0;});ds.forEach(function(d){cnt[d.status]=(cnt[d.status]||0)+1;});
+  $('stats').innerHTML=DEV_ST.map(function(s){return '<div class="stat"><b>'+(cnt[s]||0)+'</b><span>Thiết bị '+esc(s.toLowerCase())+'</span></div>';}).join('');
+  // Bộ lọc loại
+  var types=[];ds.forEach(function(d){if(d.type&&types.indexOf(d.type)<0)types.push(d.type);});
+  setOptions($('fltType'),'<option value="">Tất cả loại</option>'+types.map(function(t){return '<option>'+esc(t)+'</option>';}).join(''));
+  $('typeList').innerHTML=types.map(function(t){return '<option value="'+esc(t)+'"></option>';}).join('');
+  // Bảng thiết bị (thành viên)
+  var fs=$('fltStatus').value, ft=$('fltType').value;
+  var shown=ds.filter(function(d){return (!fs||d.status===fs)&&(!ft||d.type===ft);});
+  $('devBody').innerHTML=shown.length?shown.map(function(d){
+    return '<tr><td class="code">'+esc(d.code)+'</td><td>'+esc(d.name)+'</td><td>'+esc(d.type)+'</td><td>'+pillDev(d.status)+'</td><td>'+esc(d.note)+'</td><td class="acts">'+
+      (d.status==='Bảo trì'?'':'<button class="btn ghost sm" type="button" data-act="pick" data-id="'+esc(d.code)+'">Đăng ký mượn</button>')+'</td></tr>';
+  }).join(''):'<tr><td colspan="6" class="empty">Không có thiết bị nào khớp bộ lọc.</td></tr>';
+  // Chọn thiết bị trong form
+  setOptions($('fDev'),'<option value="">Chọn thiết bị</option>'+ds.map(function(d){
+    var off=d.status==='Bảo trì';
+    return '<option value="'+esc(d.code)+'"'+(off?' disabled':'')+'>'+esc(d.code+' - '+d.name)+(off?' (bảo trì)':d.status==='Đang mượn'?' (đang mượn, đăng ký ngày khác)':'')+'</option>';
+  }).join(''));
+  // Bảng yêu cầu
+  $('reqBodyMember').innerHTML=reqRows($('qMember').value,false);
+  // Người phụ trách
+  $('loginBox').hidden=admin;$('adminBody').hidden=!admin;
+  if(admin){
+    $('reqBodyAdmin').innerHTML=reqRows($('qAdmin').value,true);
+    $('devBodyAdmin').innerHTML=ds.length?ds.map(function(d){
+      var k='dev:'+d.code;
+      return '<tr><td class="code">'+esc(d.code)+'</td><td>'+esc(d.name)+'</td><td>'+esc(d.type)+'</td><td><select data-act="devstatus" data-id="'+esc(d.code)+'" aria-label="Tình trạng '+esc(d.code)+'">'+
+        DEV_ST.map(function(s){return '<option'+(s===d.status?' selected':'')+'>'+s+'</option>';}).join('')+'</select></td><td>'+esc(d.note)+'</td><td class="acts">'+
+        '<button class="btn ghost sm" type="button" data-act="editdev" data-id="'+esc(d.code)+'">Sửa</button>'+
+        '<button class="btn danger sm" type="button" data-act="deldev" data-id="'+esc(d.code)+'">'+delLabel(k)+'</button></td></tr>';
+    }).join(''):'<tr><td colspan="6" class="empty">Chưa có thiết bị. Thêm thiết bị đầu tiên bằng biểu mẫu phía trên.</td></tr>';
+    if(!editingDev&&!$('dCode').value)$('dCode').value=nextId(ds,'code','TB-',2,0);
+  }
+}
+function reqRows(q,isAdmin){
+  var k=norm(q.trim());
+  var list=state.requests.filter(function(r){return !k||norm(r.name).indexOf(k)>=0||norm(r.device).indexOf(k)>=0||norm(r.id).indexOf(k)>=0;});
+  if(!list.length)return '<tr><td colspan="7" class="empty">'+(k?'Không tìm thấy yêu cầu nào khớp "'+esc(q.trim())+'".':'Chưa có yêu cầu nào. Gửi yêu cầu đầu tiên ở tab Thành viên.')+'</td></tr>';
+  return list.map(function(r){
+    var d=dev(r.device), key='req:'+r.id, st, acts='';
+    if(isAdmin){
+      st='<select data-act="status" data-id="'+esc(r.id)+'" aria-label="Trạng thái '+esc(r.id)+'">'+REQ_ST.map(function(s){return '<option'+(s===r.status?' selected':'')+'>'+s+'</option>';}).join('')+'</select>';
+      if(r.status==='Đang mượn')acts+='<button class="btn sm" type="button" data-act="return" data-id="'+esc(r.id)+'">Xác nhận trả</button>';
+      acts+='<button class="btn danger sm" type="button" data-act="delreq" data-id="'+esc(r.id)+'">'+delLabel(key)+'</button>';
+    }else{
+      st=pillReq(r.status);
+      if(r.status==='Chờ duyệt')acts='<button class="btn ghost sm" type="button" data-act="editreq" data-id="'+esc(r.id)+'">Sửa</button><button class="btn danger sm" type="button" data-act="delreq" data-id="'+esc(r.id)+'">'+delLabel(key)+'</button>';
+    }
+    if(r.returnedAt)st+='<div class="note">Đã trả lúc '+esc(fmt(r.returnedAt))+'</div>';
+    return '<tr><td class="code">'+esc(r.id)+'</td><td>'+esc(r.name)+'</td><td><span class="code">'+esc(r.device)+'</span>'+(d?'<div class="note">'+esc(d.name)+'</div>':'<div class="note">Thiết bị đã xóa</div>')+'</td><td>'+esc(fmt(r.start))+'</td><td>'+esc(fmt(r.end))+'</td><td>'+st+'</td><td class="acts">'+acts+'</td></tr>';
+  }).join('');
+}
+
+/* ---------- Biểu mẫu yêu cầu (thành viên) ---------- */
+function resetReqForm(){
+  editingReq=null;$('reqForm').reset();$('reqFormTitle').textContent='Gửi yêu cầu mượn';
+  $('reqSubmit').textContent='Gửi yêu cầu';$('reqCancel').hidden=true;showErr('reqErr',null);
+}
+$('reqForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  var code=$('fDev').value, name=$('fName').value.trim(), s=$('fStart').value, en=$('fEnd').value, errs=[];
+  var d=dev(code), old=editingReq?req(editingReq):null;
+  if(!code)errs.push('Chọn thiết bị cần mượn.');
+  else if(!d)errs.push('Thiết bị đã chọn không còn trong danh sách.');
+  else if(d.status==='Bảo trì')errs.push(d.code+' đang bảo trì nên không nhận đăng ký mượn.');
+  if(!name)errs.push('Nhập tên người mượn.');
+  if(!s)errs.push('Chọn ngày giờ mượn.');
+  if(!en)errs.push('Chọn ngày giờ trả dự kiến.');
+  if(s&&en&&en<=s)errs.push('Ngày giờ trả phải sau ngày giờ mượn.');
+  if(s&&s<nowLocal()&&!(old&&old.start===s))errs.push('Ngày giờ mượn đã qua. Chọn thời điểm từ bây giờ trở đi.');
+  if(editingReq&&!old)errs.push('Yêu cầu đang sửa không còn tồn tại. Bấm Hủy sửa rồi gửi lại.');
+  if(old&&old.status!=='Chờ duyệt')errs.push('Yêu cầu '+old.id+' đã được xử lý ('+old.status+') nên không sửa được nữa.');
+  if(errs.length){showErr('reqErr',errs);return;}
+  var r;
+  if(old){r=old;r.name=name;r.device=code;r.start=s;r.end=en;}
+  else{r={id:nextId(state.requests,'id','YC-',3,100),name:name,device:code,start:s,end:en,status:'Chờ duyệt'};state.requests.push(r);}
+  // Tự động duyệt: thiết bị đang Sẵn sàng và không trùng lịch với yêu cầu Đã duyệt/Đang mượn nào.
+  var c=findConflict(r), wasEdit=!!old, auto=!c&&d.status==='Sẵn sàng';
+  r.status=auto?'Đã duyệt':'Chờ duyệt';
+  resetReqForm();save();
+  if(auto)toast('Yêu cầu '+r.id+' đã được duyệt tự động: '+d.code+' sẵn sàng và không trùng lịch.','ok');
+  else if(!c)toast((wasEdit?'Đã cập nhật ':'Đã gửi ')+r.id+'. '+d.code+' hiện '+d.status.toLowerCase()+' nên yêu cầu chờ người phụ trách duyệt.','warn');
+  else toast((wasEdit?'Đã cập nhật ':'Đã gửi ')+r.id+'. Lưu ý: trùng lịch với '+c.id+' ('+c.status+', '+fmt(c.start)+' đến '+fmt(c.end)+') nên yêu cầu chờ duyệt và có thể bị từ chối.','warn');
+});
+$('reqCancel').addEventListener('click',resetReqForm);
+
+/* ---------- Biểu mẫu thiết bị (người phụ trách) ---------- */
+function resetDevForm(){
+  editingDev=null;$('devForm').reset();$('dCode').readOnly=false;$('dCode').value='';
+  $('devFormTitle').textContent='Thêm thiết bị';$('devSubmit').textContent='Thêm thiết bị';$('devCancel').hidden=true;showErr('devErr',null);
+}
+$('devForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  if(!admin)return;
+  var code=$('dCode').value.trim().toUpperCase(), name=$('dName').value.trim(), type=$('dType').value.trim(), status=$('dStatus').value, note=$('dNote').value.trim(), errs=[];
+  if(!code)errs.push('Nhập mã thiết bị.');
+  if(!name)errs.push('Nhập tên thiết bị.');
+  if(!type)errs.push('Nhập loại thiết bị.');
+  if(!editingDev&&code&&dev(code))errs.push('Mã '+code+' đã tồn tại. Chọn mã khác.');
+  if(errs.length){showErr('devErr',errs);return;}
+  if(editingDev){var d=dev(editingDev);if(d){d.name=name;d.type=type;d.status=status;d.note=note;}}
+  else state.devices.push({code:code,name:name,type:type,status:status,note:note});
+  var msg=(editingDev?'Đã cập nhật thiết bị ':'Đã thêm thiết bị ')+code+'.';
+  resetDevForm();save();toast(msg,'ok');
+});
+$('devCancel').addEventListener('click',function(){resetDevForm();render();});
+
+/* ---------- Đăng nhập ---------- */
+$('loginForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  if($('lgUser').value.trim()===ADMIN_USER&&$('lgPass').value===ADMIN_PASS){
+    admin=true;try{sessionStorage.setItem('clb-admin','1');}catch(x){}
+    $('loginForm').reset();showErr('lgErr',null);render();
+  }else showErr('lgErr',['Sai tài khoản hoặc mật khẩu. Kiểm tra lại rồi đăng nhập.']);
+});
+$('btnLogout').addEventListener('click',function(){admin=false;try{sessionStorage.removeItem('clb-admin');}catch(x){}render();});
+
+/* ---------- Tab, lọc, tìm ---------- */
+function showTab(a){
+  $('viewMember').hidden=a;$('viewAdmin').hidden=!a;
+  $('tabMember').setAttribute('aria-selected',a?'false':'true');$('tabAdmin').setAttribute('aria-selected',a?'true':'false');
+}
+$('tabMember').addEventListener('click',function(){showTab(false);});
+$('tabAdmin').addEventListener('click',function(){showTab(true);});
+['fltStatus','fltType'].forEach(function(id){$(id).addEventListener('change',render);});
+$('qMember').addEventListener('input',function(){$('reqBodyMember').innerHTML=reqRows($('qMember').value,false);});
+$('qAdmin').addEventListener('input',function(){$('reqBodyAdmin').innerHTML=reqRows($('qAdmin').value,true);});
+$('btnSample').addEventListener('click',function(){
+  state=clone(SAMPLE);resetReqForm();resetDevForm();save(true);toast('Đã nạp dữ liệu mẫu: 5 thiết bị và 3 yêu cầu ban đầu.','ok');
+});
+
+/* ---------- Thao tác trên bảng ---------- */
+function confirmTwice(key){
+  if(armed===key){armed=null;clearTimeout(armTimer);return true;}
+  armed=key;clearTimeout(armTimer);armTimer=setTimeout(function(){armed=null;render();},4000);render();return false;
+}
+document.addEventListener('click',function(e){
+  var b=e.target.closest?e.target.closest('button[data-act]'):null;if(!b)return;
+  var act=b.getAttribute('data-act'), id=b.getAttribute('data-id'), r, d, err;
+  if(act==='pick'){
+    $('fDev').value=id;$('reqForm').scrollIntoView({behavior:'smooth',block:'center'});$('fName').focus({preventScroll:true});
+  }else if(act==='editreq'){
+    r=req(id);if(!r)return;
+    editingReq=id;$('fDev').value=r.device;$('fName').value=r.name;$('fStart').value=r.start;$('fEnd').value=r.end;
+    $('reqFormTitle').textContent='Sửa yêu cầu '+id;$('reqSubmit').textContent='Lưu thay đổi';$('reqCancel').hidden=false;showErr('reqErr',null);
+    $('reqForm').scrollIntoView({behavior:'smooth',block:'center'});
+  }else if(act==='delreq'){
+    r=req(id);if(!r)return;
+    if(!admin&&r.status!=='Chờ duyệt'){toast('Yêu cầu '+id+' đã được xử lý nên chỉ người phụ trách xóa được.','bad');render();return;}
+    if(!confirmTwice('req:'+id))return;
+    if(r.status==='Đang mượn'){err=changeStatus(id,'Từ chối');}
+    state.requests=state.requests.filter(function(x){return x.id!==id;});
+    if(editingReq===id)resetReqForm();
+    save();toast('Đã xóa yêu cầu '+id+'.','ok');
+  }else if(act==='return'){
+    if(!admin)return;
+    err=changeStatus(id,'Đã trả');
+    if(err){toast(err,'bad');render();}else{save();toast('Đã xác nhận trả '+id+' lúc '+fmt(req(id).returnedAt)+'.','ok');}
+  }else if(act==='editdev'){
+    if(!admin)return;d=dev(id);if(!d)return;
+    editingDev=id;$('dCode').value=d.code;$('dCode').readOnly=true;$('dName').value=d.name;$('dType').value=d.type;$('dStatus').value=d.status;$('dNote').value=d.note||'';
+    $('devFormTitle').textContent='Sửa thiết bị '+id;$('devSubmit').textContent='Lưu thay đổi';$('devCancel').hidden=false;showErr('devErr',null);
+    $('devForm').scrollIntoView({behavior:'smooth',block:'center'});
+  }else if(act==='deldev'){
+    if(!admin)return;
+    var busy=state.requests.filter(function(x){return x.device===id&&BLOCK.indexOf(x.status)>=0;});
+    if(busy.length){toast('Chưa xóa được '+id+': còn '+busy.length+' yêu cầu đã duyệt hoặc đang mượn ('+busy.map(function(x){return x.id;}).join(', ')+'). Hoàn tất hoặc từ chối các yêu cầu này trước.','bad');return;}
+    if(!confirmTwice('dev:'+id))return;
+    state.devices=state.devices.filter(function(x){return x.code!==id;});
+    if(editingDev===id)resetDevForm();
+    save();toast('Đã xóa thiết bị '+id+'.','ok');
+  }
+});
+document.addEventListener('change',function(e){
+  var s=e.target;if(!s.getAttribute||!admin)return;
+  var act=s.getAttribute('data-act'), id=s.getAttribute('data-id');
+  if(act==='status'){
+    var err=changeStatus(id,s.value);
+    if(err){toast(err,'bad');render();}else{save(s.value==='Chờ duyệt'?id:null);toast('Đã chuyển '+id+' sang '+s.value+'.','ok');}
+  }else if(act==='devstatus'){
+    var d=dev(id);if(!d)return;
+    d.status=s.value;save();toast('Đã đổi tình trạng '+id+' thành '+s.value+'.','ok');
+  }
+});
+
+/* ---------- Dữ liệu dùng chung (khi chạy trên claude.ai); nơi khác dùng localStorage ---------- */
+function initShared(){
+  if(!window.claude||typeof window.claude.use!=='function')return;
+  setSync('Đang kết nối dữ liệu dùng chung…');
+  window.claude.use('db').then(function(db){
+    if(!db){setSync('Lưu trên trình duyệt này');return;}
+    dbDoc=db.doc('app/state');
+    var timer=setTimeout(function(){setSync('Chưa kết nối được dữ liệu dùng chung, đang hiển thị bản trên máy này');},10000);
+    dbDoc.onSnapshot(function(snap){
+      if(!snap.metadata||!snap.metadata.fromCache)clearTimeout(timer);
+      if(snap.exists){
+        var d=snap.data();
+        if(valid(d)){state={devices:clone(d.devices),requests:clone(d.requests)};persistLocal();render();}
+      }
+      setSync('Dữ liệu dùng chung, cập nhật trực tiếp cho mọi người đang mở trang');
+    },function(){clearTimeout(timer);dbDoc=null;setSync('Lưu trên trình duyệt này');});
+  }).catch(function(){setSync('Lưu trên trình duyệt này');});
+}
+
+render();
+initShared();
+})();
+</script>
